@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>mistystep</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <span class="app-name">mistystep</span>
+      <div class="status-wrap">
+        <span id="status-dot" class="status-dot status-connecting"></span>
+        <span id="status-text" class="status-text">Connecting…</span>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tab-bar">
+    <button class="tab-btn active" data-tab="send" id="tab-send">Send to Linux</button>
+    <button class="tab-btn"        data-tab="get"  id="tab-get">Get from Linux</button>
+  </nav>
+
+  <!-- TAB 1: Send to Linux -->
+  <section id="pane-send" class="pane active">
+    <div class="card">
+      <h2 class="card-title">Clipboard</h2>
+      <textarea id="clipboard-input" placeholder="Type or paste text to send to Linux clipboard…" rows="6"></textarea>
+      <button id="btn-send-clipboard" class="btn-primary">Copy to Linux Clipboard</button>
+      <div id="clipboard-msg" class="feedback" aria-live="polite"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">Upload File</h2>
+      <div id="drop-zone" class="drop-zone" role="button" tabindex="0" aria-label="Select or drop file to upload">
+        <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+        </svg>
+        <p class="drop-label">Tap to pick a file<br><span class="drop-sub">or drag &amp; drop on desktop</span></p>
+      </div>
+      <input type="file" id="file-input" style="display:none" multiple>
+      <div id="progress-wrap" class="progress-wrap hidden">
+        <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+        <span id="progress-label" class="progress-label">0%</span>
+      </div>
+      <div id="upload-msg" class="feedback" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- TAB 2: Get from Linux -->
+  <section id="pane-get" class="pane">
+    <div class="card">
+      <h2 class="card-title">Linux Clipboard</h2>
+      <div id="clipboard-display" class="clipboard-content" aria-label="Linux clipboard content">(waiting for content…)</div>
+      <button id="btn-copy-from-linux" class="btn-primary">Tap to Copy</button>
+      <div id="copy-msg" class="feedback" aria-live="polite"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">Downloads</h2>
+      <div id="file-list" class="file-list">
+        <p class="empty-state">No files in ~/Downloads</p>
+      </div>
+    </div>
+  </section>
+
+  <script src="/app.js"></script>
+</body>
+</html>
