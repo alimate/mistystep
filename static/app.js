@@ -138,6 +138,12 @@ function connectWebSocket() {
 // ---------------------------------------------------------------------------
 // File list rendering
 // ---------------------------------------------------------------------------
+const SHARE_ICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+  <polyline points="16 6 12 2 8 6"/>
+  <line x1="12" y1="2" x2="12" y2="15"/>
+</svg>`;
+
 function renderFileList(files) {
   if (!files.length) {
     fileList.innerHTML = '<p class="empty-state">No files in ~/Downloads</p>';
@@ -146,12 +152,46 @@ function renderFileList(files) {
   fileList.innerHTML = files.map(f => {
     const href = '/api/files/' + encodeURIComponent(f.name);
     const date = new Date(f.modified * 1000).toLocaleDateString();
-    return `<a href="${escapeAttr(href)}" download="${escapeAttr(f.name)}" class="file-item">
-      <span class="file-name">${escapeHtml(f.name)}</span>
-      <span class="file-meta">${escapeHtml(fmtBytes(f.size))} · ${escapeHtml(date)}</span>
-    </a>`;
+    return `<div class="file-item">
+      <a href="${escapeAttr(href)}" download="${escapeAttr(f.name)}" class="file-info">
+        <span class="file-name">${escapeHtml(f.name)}</span>
+        <span class="file-meta">${escapeHtml(fmtBytes(f.size))} · ${escapeHtml(date)}</span>
+      </a>
+      <button class="file-share-btn" data-filename="${escapeAttr(f.name)}" aria-label="Share ${escapeAttr(f.name)}">${SHARE_ICON}</button>
+    </div>`;
   }).join('');
 }
+
+async function shareFile(name) {
+  const url = '/api/files/' + encodeURIComponent(name);
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const blob = await resp.blob();
+    const file = new File([blob], name, { type: blob.type });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: name });
+    } else {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    }
+  } catch (err) {
+    if (err.name !== 'AbortError') console.error('Share failed:', err);
+  }
+}
+
+fileList.addEventListener('click', e => {
+  const btn = e.target.closest('.file-share-btn');
+  if (!btn || btn.disabled) return;
+  e.preventDefault();
+  btn.disabled = true;
+  shareFile(btn.dataset.filename).finally(() => { btn.disabled = false; });
+});
 
 // ---------------------------------------------------------------------------
 // Send clipboard to Linux
