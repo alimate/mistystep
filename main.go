@@ -363,9 +363,14 @@ func (s *server) handleUpload(w http.ResponseWriter, r *http.Request) {
 // ---------------------------------------------------------------------------
 
 func startMDNS(cfg *config) {
+	// Advertise only real LAN IPs. Passing nil here makes hashicorp/mdns
+	// enumerate every address on every interface, which on a host with
+	// docker bridges / VPN tunnels means future.local resolves to an
+	// unreachable 172.x / 10.x / link-local address on the client.
+	ips := lanIPs()
 	svc, err := mdns.NewMDNSService(
 		cfg.mdnsName, "_http._tcp", "local.", cfg.mdnsHost+".",
-		cfg.port, nil, []string{"path=/"},
+		cfg.port, ips, []string{"path=/"},
 	)
 	if err != nil {
 		log.Printf("mDNS service create: %v (continuing without mDNS)", err)
@@ -468,11 +473,60 @@ func main() {
 	log.Fatal(http.ListenAndServe(addr, mux))
 }
 
-func lanIP() string {
-	conn, err := net.Dial("udp", "8.8.8.8:80")
+// lanIPs returns the host's real LAN-facing IPv4 addresses, excluding
+// loopback, link-local, VPN point-to-point tunnels, and virtual/container
+// bridges (docker0, br-*, veth*, virbr*, etc.). These are the only
+// addresses worth advertising over mDNS or printing as reachable URLs.
+func lanIPs() []net.IP {
+	ifaces, err := net.Interfaces()
 	if err != nil {
+		return nil
+	}
+	var out []net.IP
+	for _, iface := range ifaces {
+		if iface.Flags&net.FlagUp == 0 ||
+			iface.Flags&net.FlagLoopback != 0 ||
+			iface.Flags&net.FlagPointToPoint != 0 { // VPN tunnels (tun0)
+			continue
+		}
+		if isVirtualIface(iface.Name) {
+			continue
+		}
+		addrs, err := iface.Addrs()
+		if err != nil {
+			continue
+		}
+		for _, a := range addrs {
+			ipnet, ok := a.(*net.IPNet)
+			if !ok {
+				continue
+			}
+			ip := ipnet.IP.To4()
+			if ip == nil || ip.IsLoopback() || ip.IsLinkLocalUnicast() {
+				continue
+			}
+			out = append(out, ip)
+		}
+	}
+	return out
+}
+
+// isVirtualIface reports whether name looks like a container/VM/VPN bridge
+// rather than a physical or wireless NIC.
+func isVirtualIface(name string) bool {
+	for _, p := range []string{"docker", "br-", "veth", "virbr", "tun", "tap", "vmnet", "wg", "zt"} {
+		if strings.HasPrefix(name, p) {
+			return true
+		}
+	}
+	return false
+}
+
+// lanIP returns the first LAN-facing IPv4 address as a string, or "".
+func lanIP() string {
+	ips := lanIPs()
+	if len(ips) == 0 {
 		return ""
 	}
-	defer conn.Close()
-	return conn.LocalAddr().(*net.UDPAddr).IP.String()
+	return ips[0].String()
 }
