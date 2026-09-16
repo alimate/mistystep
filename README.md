@@ -21,6 +21,7 @@ Everything updates live via WebSocket — no manual refresh needed.
 - Linux with either:
   - **Wayland**: `wl-clipboard` (`sudo apt install wl-clipboard`)
   - **X11**: `xclip` (`sudo apt install xclip`)
+- **GNOME on Wayland**: install `xclip` too. GNOME lacks the data-control protocol, so `wl-paste` grabs keyboard focus on every clipboard poll (focus jumps out of your browser, a generic icon flashes in the dock). When `DISPLAY` is set and `xclip` is available, mistystep reads the clipboard through Xwayland instead, which never takes focus.
 
 ## Install
 
@@ -154,6 +155,7 @@ ExecStart=/home/$USER/mistystep/mistystep --dir /home/$USER/Downloads
 Restart=on-failure
 User=$USER
 Environment=WAYLAND_DISPLAY=wayland-0
+Environment=DISPLAY=:0
 Environment=XDG_RUNTIME_DIR=/run/user/$(id -u)
 
 [Install]
@@ -163,7 +165,7 @@ EOF
 sudo systemctl enable --now mistystep
 ```
 
-> **Note:** The `WAYLAND_DISPLAY` and `XDG_RUNTIME_DIR` environment variables are needed so the service can access the Wayland clipboard. Adjust the values to match your session (`echo $WAYLAND_DISPLAY` and `echo $XDG_RUNTIME_DIR` in a terminal).
+> **Note:** The `WAYLAND_DISPLAY`, `DISPLAY` and `XDG_RUNTIME_DIR` environment variables are needed so the service can access the clipboard (`DISPLAY` lets it read via `xclip`, which avoids the GNOME focus-stealing issue above). Adjust the values to match your session (`echo $WAYLAND_DISPLAY $DISPLAY $XDG_RUNTIME_DIR` in a terminal).
 
 ## Security
 

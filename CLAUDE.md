@@ -24,7 +24,7 @@ There are no tests.
 Three files make up the entire codebase:
 
 - **`main.go`** — HTTP server, WebSocket hub, file/clipboard pollers, mDNS
-- **`clipboard.go`** — thin wrappers around `wl-paste`/`wl-copy` (Wayland) and `xclip` (X11); detection is via `WAYLAND_DISPLAY` / `DISPLAY` env vars
+- **`clipboard.go`** — thin wrappers around `wl-paste`/`wl-copy` (Wayland) and `xclip` (X11); detection is via `WAYLAND_DISPLAY` / `DISPLAY` env vars. Reads prefer `xclip` whenever `DISPLAY` is set and xclip is installed: on GNOME (no data-control protocol) `wl-paste` maps a window to grab focus on every poll, stealing focus from the user's apps
 - **`static/`** — embedded via `//go:embed static` into the binary at build time; served as a plain `http.FileServer`
 
 ### Data flow
@@ -54,4 +54,4 @@ XSS prevention: file names are always passed through `escapeHtml()`/`escapeAttr(
 - **No authentication** — intentional, trusted-LAN only
 - **No database** — state is the filesystem and the live clipboard
 - **Static assets are compiled in** — any change to `static/` requires a rebuild and service restart to take effect
-- **Clipboard requires a display server** — the systemd unit must have `WAYLAND_DISPLAY` and `XDG_RUNTIME_DIR` set in its `Environment=` to read/write the Wayland clipboard
+- **Clipboard requires a display server** — the systemd unit must have `WAYLAND_DISPLAY`, `DISPLAY` and `XDG_RUNTIME_DIR` set in its `Environment=` to read/write the clipboard without stealing focus

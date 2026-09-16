@@ -8,8 +8,17 @@ import (
 )
 
 // GetClipboard reads the current clipboard content.
-// Detection order: Wayland → X11 → error.
+// Detection order: X11 (xclip, incl. via Xwayland) → Wayland → error.
+//
+// X11 is preferred because on compositors without the wlr/ext data-control
+// protocol (GNOME/Mutter), wl-paste maps a transient window to gain keyboard
+// focus on every call. Polled every second, that steals focus from the active
+// app and flashes an icon in the dock. xclip reads through Xwayland's
+// clipboard bridge with an unmapped window, so it never takes focus.
 func GetClipboard() (string, error) {
+	if os.Getenv("DISPLAY") != "" && hasXclip() {
+		return x11_get()
+	}
 	if os.Getenv("WAYLAND_DISPLAY") != "" {
 		return wayland_get()
 	}
@@ -29,6 +38,11 @@ func SetClipboard(text string) error {
 		return x11_set(text)
 	}
 	return errors.New("no display server detected (WAYLAND_DISPLAY and DISPLAY are unset)")
+}
+
+func hasXclip() bool {
+	_, err := exec.LookPath("xclip")
+	return err == nil
 }
 
 func wayland_get() (string, error) {
